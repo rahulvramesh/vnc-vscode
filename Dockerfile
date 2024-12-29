@@ -14,7 +14,11 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     sudo \
+    nginx \
     && rm -rf /var/lib/apt/lists/*
+
+# Install wetty globally
+RUN npm install -g wetty
 
 # Create a non-root user
 RUN useradd -m -s /bin/bash coder \
@@ -34,10 +38,20 @@ RUN code-server --install-extension ms-python.python \
 
 # Create config directory and add default settings
 RUN mkdir -p ~/.config/code-server
-RUN echo "bind-addr: 0.0.0.0:8080\nauth: password\npassword: changeme\ncert: false" > ~/.config/code-server/config.yaml
+RUN echo "bind-addr: 127.0.0.1:8080\nauth: none\ncert: false" > ~/.config/code-server/config.yaml
 
-# Expose the web interface port
-EXPOSE 8080
+# Switch back to root for final setup
+USER root
 
-# Start code-server
-CMD ["code-server", "--bind-addr", "0.0.0.0:8080"]
+# Copy nginx configuration and HTML files
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY index.html /var/www/html/index.html
+
+# Expose port for nginx
+EXPOSE 80
+
+# Copy and set up start script
+COPY start-services.sh /start-services.sh
+RUN chmod +x /start-services.sh
+
+CMD ["/start-services.sh"]
